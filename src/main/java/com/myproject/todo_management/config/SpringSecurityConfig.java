@@ -33,14 +33,15 @@ public class SpringSecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
+//                Menonaktifkan CSRF (Cross-Site Request Forgery) protection. Biasanya dimatikan untuk API atau testing.
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests((authorize) -> {
-//                    authorize.requestMatchers(HttpMethod.POST, "/api/**").hasRole("ADMIN");
-//                    authorize.requestMatchers(HttpMethod.PUT, "/api/**").hasRole("ADMIN");
-//                    authorize.requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN");
-//                    authorize.requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("ADMIN", "USER");
-//                    authorize.requestMatchers(HttpMethod.PATCH, "/api/**").hasAnyRole("ADMIN", "USER");
+
+                    authorize.requestMatchers("/api/auth/**").permitAll();
+
+//                Semua request HARUS login dulu (tidak ada endpoint publik).
                     authorize.anyRequest().authenticated();
+//                Autentikasi dilakukan dengan HTTP Basic Auth (username & password dikirim di header).
                 }).httpBasic(Customizer.withDefaults());
         return http.build();
     }
@@ -49,22 +50,4 @@ public class SpringSecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }
-
-//    @Bean
-//    public UserDetailsService userDetailsService() {
-//
-//        UserDetails febri = User.builder()
-//                .username("febri")
-//                .password(passwordEncoder().encode("password"))
-//                .roles("USER")
-//                .build();
-//
-//        UserDetails admin = User.builder()
-//                .username("admin")
-//                .password(passwordEncoder().encode("admin"))
-//                .roles("ADMIN")
-//                .build();
-//
-//        return new InMemoryUserDetailsManager(febri, admin);
-//    }
 }

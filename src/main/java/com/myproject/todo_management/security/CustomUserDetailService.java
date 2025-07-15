@@ -24,6 +24,8 @@ public class CustomUserDetailService implements UserDetailsService {
 
         User user = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail).orElseThrow(() -> new UsernameNotFoundException("User not exists by username or Email"));
 
+//      Role dari user (misalnya "ADMIN", "USER") diubah menjadi GrantedAuthority.
+//      Ini agar Spring Security tahu apa saja hak akses user ini.
         Set<GrantedAuthority> authorities = user.getRoles().stream().map((role) -> new SimpleGrantedAuthority(role.getName()))
                 .collect(Collectors.toSet());
 
