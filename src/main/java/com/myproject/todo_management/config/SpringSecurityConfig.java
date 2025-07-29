@@ -40,6 +40,7 @@ public class SpringSecurityConfig {
                     authorize.requestMatchers("/api/auth/**").permitAll();
 
 //                Semua request HARUS login dulu (tidak ada endpoint publik).
+                    authorize.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
                     authorize.anyRequest().authenticated();
 //                Autentikasi dilakukan dengan HTTP Basic Auth (username & password dikirim di header).
                 }).httpBasic(Customizer.withDefaults());
