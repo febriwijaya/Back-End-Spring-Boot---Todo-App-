@@ -11,6 +11,8 @@ import com.myproject.todo_management.respository.UserRepository;
 import com.myproject.todo_management.security.JwtTokenProvider;
 import com.myproject.todo_management.service.AuthService;
 import lombok.AllArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -32,6 +34,7 @@ public class AuthServiceImpl implements AuthService {
     private PasswordEncoder passwordEncoder;
     private AuthenticationManager authenticationManager;
     private JwtTokenProvider jwtTokenProvider;
+    private static final Logger logger = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     @Override
     public String register(RegisterDto registerDto) {
@@ -65,33 +68,43 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public JwtAuthResponse login(LoginDto loginDto) {
-
-        Authentication authentication =  authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
+        Optional<User> userOptional = userRepository.findByUsernameOrEmail(
                 loginDto.getUsernameOrEmail(),
-                loginDto.getPassword()
-        ));
+                loginDto.getUsernameOrEmail()
+        );
+
+        if (userOptional.isEmpty()) {
+            throw new TodoAPIException(HttpStatus.UNAUTHORIZED, "Incorrect username or password");
+        }
+
+        User user = userOptional.get();
+
+        if (!passwordEncoder.matches(loginDto.getPassword(), user.getPassword())) {
+            throw new TodoAPIException(HttpStatus.UNAUTHORIZED, "Incorrect username or password");
+        }
+
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        loginDto.getUsernameOrEmail(),
+                        loginDto.getPassword()
+                )
+        );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         String token = jwtTokenProvider.generateToken(authentication);
 
-        Optional<User> userOptional =  userRepository.findByUsernameOrEmail(loginDto.getUsernameOrEmail(), loginDto.getUsernameOrEmail());
-
-        String role = null;
-        if(userOptional.isPresent()) {
-            User loggedInUser = userOptional.get();
-            Optional<Role> optionalRole = loggedInUser.getRoles().stream().findFirst();
-
-            if (optionalRole.isPresent()) {
-                Role userRole = optionalRole.get();
-                role = userRole.getName();
-            }
-         }
+        // Ambil role
+        String role = user.getRoles().stream()
+                .findFirst()
+                .map(Role::getName)
+                .orElse(null);
 
         JwtAuthResponse jwtAuthResponse = new JwtAuthResponse();
         jwtAuthResponse.setRole(role);
         jwtAuthResponse.setAccessToken(token);
 
         return jwtAuthResponse;
+
     }
 }

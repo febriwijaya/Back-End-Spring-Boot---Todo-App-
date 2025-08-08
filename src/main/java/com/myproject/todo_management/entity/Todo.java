@@ -5,6 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
 
 @Setter
 @Getter
@@ -23,5 +27,24 @@ public class Todo {
 
     @Column(nullable = false)
     private String description;
+
     private boolean completed;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Column(name = "created_by", nullable = false, updatable = false)
+    private String createdBy;
+
+    @Column(name = "updated_by")
+    private String updatedBy;
+
+    @CreationTimestamp
+    @Column(name = "time_created", updatable = false)
+    private LocalDateTime timeCreated;
+
+    @UpdateTimestamp
+    @Column(name = "time_updated")
+    private LocalDateTime timeUpdated;
 }
