@@ -1,8 +1,6 @@
 package com.myproject.todo_management.controller;
 
-import com.myproject.todo_management.dto.JwtAuthResponse;
-import com.myproject.todo_management.dto.LoginDto;
-import com.myproject.todo_management.dto.RegisterDto;
+import com.myproject.todo_management.dto.*;
 import com.myproject.todo_management.exception.ErrorDetails;
 import com.myproject.todo_management.exception.TodoAPIException;
 import com.myproject.todo_management.service.AuthService;
@@ -57,12 +55,19 @@ public class AuthController {
         try {
             RegisterDto registerDto = authService.getUserById(id);
             return new ResponseEntity<>(registerDto, HttpStatus.OK);
+        } catch (TodoAPIException apiEx) {
+            ErrorDetails errorDetails = new ErrorDetails(
+                    LocalDateTime.now(),
+                    apiEx.getMessage(),
+                    "Failed to fetch user with id : " + id
+            );
+            return ResponseEntity.status(apiEx.getStatus()).body(errorDetails);
         } catch (Exception e) {
             log.error("There is an error", e); // log error + stack trace
 
             ErrorDetails errorDetails = new ErrorDetails(
                     LocalDateTime.now(),
-                    "Failed to fetch user with id: " + id,
+                    "Unexpected error occurred, Failed to fetch user with id: " + id,
                     e.getMessage()
             );
 
@@ -76,12 +81,19 @@ public class AuthController {
         try {
             RegisterDto registerDto =  authService.getUserByUsernameOrEmail(usernameOrEmail);
             return new ResponseEntity<>(registerDto, HttpStatus.OK);
+        } catch (TodoAPIException apiEx) {
+            ErrorDetails errorDetails = new ErrorDetails(
+                    LocalDateTime.now(),
+                    apiEx.getMessage(),
+                    "Failed to fetch user with username or email : " + usernameOrEmail
+            );
+            return ResponseEntity.status(apiEx.getStatus()).body(errorDetails);
         } catch (Exception e) {
             log.error("There is an error", e); // log error + stack trace
 
             ErrorDetails errorDetails = new ErrorDetails(
                     LocalDateTime.now(),
-                    "Failed to fetch user with username or email : " + usernameOrEmail,
+                    "Unexpected error occurred, Failed to fetch user with username or email : " + usernameOrEmail,
                     e.getMessage()
             );
 
@@ -132,10 +144,10 @@ public class AuthController {
     )
     public ResponseEntity<?> updateRegister(
             @PathVariable Long id,
-            @RequestPart("data") @Valid RegisterDto registerDto,
+            @RequestPart("data") @Valid UpdateRegisterDto updateRegisterDto,
             @RequestPart(value = "photo", required = false) MultipartFile photo) {
         try {
-            String response = authService.updateRegister(id, registerDto, photo);
+            String response = authService.updateRegister(id, updateRegisterDto, photo);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (TodoAPIException apiEx) {
             ErrorDetails errorDetails = new ErrorDetails(
@@ -215,6 +227,31 @@ public class AuthController {
             ErrorDetails errorDetails = new ErrorDetails(
                     LocalDateTime.now(),
                     "Unexpected error during login",
+                    e.getMessage()
+            );
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorDetails);
+        }
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PutMapping("/update-password")
+    public ResponseEntity<?> updatePassword(
+            @RequestBody @Valid UpdatePasswordDto passwordDto) {
+        try {
+            String response = authService.updatePassword(passwordDto);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (TodoAPIException apiEx) {
+            ErrorDetails errorDetails = new ErrorDetails(
+                    LocalDateTime.now(),
+                    apiEx.getMessage(),
+                    "Password update failed"
+            );
+            return ResponseEntity.status(apiEx.getStatus()).body(errorDetails);
+        } catch (Exception e) {
+            log.error("Unexpected error during password update", e);
+            ErrorDetails errorDetails = new ErrorDetails(
+                    LocalDateTime.now(),
+                    "Unexpected error occurred",
                     e.getMessage()
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorDetails);

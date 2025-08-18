@@ -1,9 +1,6 @@
 package com.myproject.todo_management.service.impl;
 
-import com.myproject.todo_management.dto.JwtAuthResponse;
-import com.myproject.todo_management.dto.LoginDto;
-import com.myproject.todo_management.dto.RegisterDto;
-import com.myproject.todo_management.dto.TodoDto;
+import com.myproject.todo_management.dto.*;
 import com.myproject.todo_management.entity.Role;
 import com.myproject.todo_management.entity.User;
 import com.myproject.todo_management.exception.TodoAPIException;
@@ -61,6 +58,22 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public RegisterDto getUserById(Long id)  {
+
+        // ambil username yang sedang login
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication.getName();
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
+        User currentUser = userRepository.findByUsernameOrEmail(currentUsername, currentUsername)
+                .orElseThrow(() -> new TodoAPIException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Jika bukan admin, pastikan hanya update dirinya sendiri
+        if (!isAdmin && !currentUser.getId().equals(id)) {
+            throw new TodoAPIException(HttpStatus.FORBIDDEN, "You are not allowed to view other user's data");
+        }
+
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new TodoAPIException(HttpStatus.NOT_FOUND, "User not found with id " + id));
         return modelMapper.map(user, RegisterDto.class);
@@ -68,9 +81,56 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public RegisterDto getUserByUsernameOrEmail(String usernameOrEmail) {
+
+        // ambil username yang sedang login
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication.getName();
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
+        User currentUser = userRepository.findByUsernameOrEmail(currentUsername, currentUsername)
+                .orElseThrow(() -> new TodoAPIException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Jika bukan admin, pastikan hanya update dirinya sendiri
+        if (!isAdmin && !currentUsername.equals(usernameOrEmail)) {
+            throw new TodoAPIException(HttpStatus.FORBIDDEN, "You are not allowed to view other user's data");
+        }
+
+
         User user = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail)
                 .orElseThrow(() -> new TodoAPIException(HttpStatus.NOT_FOUND, "User not found with username or email " + usernameOrEmail));
         return modelMapper.map(user, RegisterDto.class);
+    }
+
+    @Override
+    @Transactional
+    public String updatePassword(UpdatePasswordDto dto) {
+        // ambil data yang sedang login
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication.getName();
+
+        User user = userRepository.findByUsernameOrEmail(currentUsername, currentUsername)
+                .orElseThrow(() -> new TodoAPIException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Validasi password lama
+        if (!passwordEncoder.matches(dto.getOldPassword(), user.getPassword())) {
+            throw new TodoAPIException(HttpStatus.BAD_REQUEST, "Old password is incorrect");
+        }
+
+        // Validasi konfirmasi
+        if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
+            throw new TodoAPIException(HttpStatus.BAD_REQUEST, "New password and confirmation do not match");
+        }
+
+        // Update password
+        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        user.setUpdatedAt(LocalDateTime.now());
+        user.setUpdatedBy(currentUsername);
+
+        userRepository.save(user);
+
+        return "Password updated successfully";
     }
 
     private String savePhoto(MultipartFile photo) throws IOException {
@@ -178,36 +238,49 @@ public class AuthServiceImpl implements AuthService {
         return "User Registered Successfully";
     }
 
+
     @Override
     @Transactional
-    public String updateRegister(Long userId, RegisterDto registerDto, MultipartFile photo) throws IOException {
+    public String updateRegister(Long userId, UpdateRegisterDto updateRegisterDto, MultipartFile photo) throws IOException {
+
+        // ambil username yang sedang login
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication.getName();
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
+        User currentUser = userRepository.findByUsernameOrEmail(currentUsername, currentUsername)
+                .orElseThrow(() -> new TodoAPIException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Jika bukan admin, pastikan hanya update dirinya sendiri
+        if (!isAdmin && !currentUser.getId().equals(userId)) {
+            throw new TodoAPIException(HttpStatus.FORBIDDEN, "You are not allowed to update other user's data");
+        }
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new TodoAPIException(HttpStatus.NOT_FOUND, "User not found"));
 
         // Cek duplikasi username (pastikan bukan user yang sedang update)
-        Optional<User> existingByUsername = userRepository.findByUsername(registerDto.getUsername());
+        Optional<User> existingByUsername = userRepository.findByUsername(updateRegisterDto.getUsername());
         if (existingByUsername.isPresent() && !existingByUsername.get().getId().equals(user.getId())) {
             throw new TodoAPIException(HttpStatus.BAD_REQUEST, "Username already taken");
         }
 
         // Cek duplikasi email (pastikan bukan user yang sedang update)
-        Optional<User> existingByEmail = userRepository.findByEmail(registerDto.getEmail());
+        Optional<User> existingByEmail = userRepository.findByEmail(updateRegisterDto.getEmail());
         if (existingByEmail.isPresent() && !existingByEmail.get().getId().equals(user.getId())) {
             throw new TodoAPIException(HttpStatus.BAD_REQUEST, "Email already taken");
         }
 
-        user.setName(registerDto.getName());
-        user.setUsername(registerDto.getUsername());
-        user.setEmail(registerDto.getEmail());
-        if (registerDto.getPassword() != null && !registerDto.getPassword().isBlank()) {
-            user.setPassword(passwordEncoder.encode(registerDto.getPassword()));
-        }
-        user.setBirthDate(registerDto.getBirthDate());
-        user.setJobTitle(registerDto.getJobTitle());
-        user.setLocation(registerDto.getLocation());
+        user.setName(updateRegisterDto.getName());
+        user.setUsername(updateRegisterDto.getUsername());
+        user.setEmail(updateRegisterDto.getEmail());
+        user.setBirthDate(updateRegisterDto.getBirthDate());
+        user.setJobTitle(updateRegisterDto.getJobTitle());
+        user.setLocation(updateRegisterDto.getLocation());
         user.setUpdatedAt(LocalDateTime.now());
-        user.setUpdatedBy(registerDto.getUsername());
+        user.setUpdatedBy(updateRegisterDto.getUsername());
 
 //        if(photo != null && !photo.isEmpty()) {
             //hapus foto lama
