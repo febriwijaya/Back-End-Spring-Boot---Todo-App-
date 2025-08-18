@@ -18,7 +18,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableMethodSecurity
+@EnableMethodSecurity // Aktifkan @PreAuthorize dan @PostAuthorize
 @AllArgsConstructor
 public class SpringSecurityConfig {
 
@@ -42,26 +42,26 @@ public class SpringSecurityConfig {
 //                Menonaktifkan CSRF (Cross-Site Request Forgery) protection. Biasanya dimatikan untuk API atau testing.
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests((authorize) -> {
-                    // Hanya login yang boleh tanpa autentikasi
+                    // Endpoint publik
                     authorize.requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll();
+                    authorize.requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll();
 
-                    // Register hanya boleh diakses oleh ADMIN
-                    authorize.requestMatchers(HttpMethod.POST, "/api/auth/register").hasRole("ADMIN");
+                    // Endpoint delete user hanya untuk ADMIN
+                    authorize.requestMatchers(HttpMethod.DELETE, "/api/auth/delete/**").hasRole("ADMIN");
 
-//                Semua request HARUS login dulu (tidak ada endpoint publik).
+                    // Endpoint get all user hanya untuk ADMIN
+                    authorize.requestMatchers(HttpMethod.GET, "/api/auth/users").hasRole("ADMIN");
+
+                    // Preflight request (CORS)
                     authorize.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
 
+                    // Semua request lain harus login
                     authorize.anyRequest().authenticated();
-//                Autentikasi dilakukan dengan HTTP Basic Auth (username & password dikirim di header).
 
-                })// Hapus httpBasic(), ganti dengan stateless session untuk JWT
-                .exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationEntryPoint))
-                // Tambahkan .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) supaya Spring Security tidak membuat session (karena JWT sifatnya stateless).
+                }).exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationEntryPoint))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-
-//        http.exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationEntryPoint));
-
+        // Filter JWT sebelum UsernamePasswordAuthenticationFilter
         http.addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
