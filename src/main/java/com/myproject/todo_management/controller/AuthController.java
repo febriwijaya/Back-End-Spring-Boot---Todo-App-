@@ -56,6 +56,7 @@ public class AuthController {
             RegisterDto registerDto = authService.getUserById(id);
             return new ResponseEntity<>(registerDto, HttpStatus.OK);
         } catch (TodoAPIException apiEx) {
+            log.error("There is an error", apiEx);
             ErrorDetails errorDetails = new ErrorDetails(
                     LocalDateTime.now(),
                     apiEx.getMessage(),
@@ -82,6 +83,7 @@ public class AuthController {
             RegisterDto registerDto =  authService.getUserByUsernameOrEmail(usernameOrEmail);
             return new ResponseEntity<>(registerDto, HttpStatus.OK);
         } catch (TodoAPIException apiEx) {
+            log.error("There is an error", apiEx);
             ErrorDetails errorDetails = new ErrorDetails(
                     LocalDateTime.now(),
                     apiEx.getMessage(),
@@ -112,6 +114,7 @@ public class AuthController {
             String response = authService.register(registerDto, photo);
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (TodoAPIException apiEx) {
+            log.error("There is an error", apiEx);
             ErrorDetails errorDetails = new ErrorDetails(
                     LocalDateTime.now(),
                     apiEx.getMessage(),
@@ -150,6 +153,7 @@ public class AuthController {
             String response = authService.updateRegister(id, updateRegisterDto, photo);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (TodoAPIException apiEx) {
+            log.error("There is an error", apiEx);
             ErrorDetails errorDetails = new ErrorDetails(
                     LocalDateTime.now(),
                     apiEx.getMessage(),
@@ -241,6 +245,7 @@ public class AuthController {
             String response = authService.updatePassword(passwordDto);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (TodoAPIException apiEx) {
+            log.error("There is an error", apiEx);
             ErrorDetails errorDetails = new ErrorDetails(
                     LocalDateTime.now(),
                     apiEx.getMessage(),

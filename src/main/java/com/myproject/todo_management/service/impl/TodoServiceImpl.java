@@ -11,6 +11,7 @@ import com.myproject.todo_management.service.TodoService;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -27,10 +28,39 @@ public class TodoServiceImpl implements TodoService {
 
     private UserRepository userRepository;
 
+    //  Helper untuk ambil data user yang sedang login
+    private Authentication getAuthentication() {
+        return SecurityContextHolder.getContext().getAuthentication();
+    }
+
+    private String getCurrentUsername() {
+        return getAuthentication().getName();
+    }
+
+    private boolean isAdmin() {
+        return getAuthentication().getAuthorities().stream()
+                .anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN"));
+    }
+
+    //  Helper untuk ambil todo dan cek akses
+    private Todo getTodoWithAccessCheck(Long id, String action) {
+        String currentUsername = getCurrentUsername();
+        boolean admin = isAdmin();
+
+        Todo todo = todoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Todo not found with id : " + id));
+
+        if (!admin && !todo.getCreatedBy().equals(currentUsername)) {
+            throw new TodoAPIException(HttpStatus.FORBIDDEN,
+                    "you dont have access to " + action + " another user data");
+        }
+        return todo;
+    }
+
     @Override
     public TodoDto addTodo(TodoDto todoDto) {
         // Ambil user yang sedang login
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        String username = getCurrentUsername();
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -56,32 +86,32 @@ public class TodoServiceImpl implements TodoService {
 
     @Override
     public TodoDto getTodo(Long id) {
-        Todo todo = todoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Todo not found with id : " + id));
-
+        Todo todo = getTodoWithAccessCheck(id, "view");
         return modelMapper.map(todo, TodoDto.class);
     }
 
     @Override
     public List<TodoDto> getAllTodos() {
+        String currentUsername = getCurrentUsername();
 
-        List<Todo> todos = todoRepository.findAll();
+        List<Todo> todos = isAdmin()
+                ? todoRepository.findAll()
+                : todoRepository.findByCreatedBy(currentUsername);
 
-        return todos.stream().map((todo) -> modelMapper.map(todo, TodoDto.class))
+        return todos.stream()
+                .map(todo -> modelMapper.map(todo, TodoDto.class))
                 .collect(Collectors.toList());
     }
 
     @Override
     public TodoDto updateTodo(TodoDto todoDto, Long id) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Todo todo = getTodoWithAccessCheck(id, "update");
 
-       Todo todo =  todoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Todo not found with id : " + id));
-
+        // update fields
        todo.setTitle(todoDto.getTitle());
        todo.setDescription(todoDto.getDescription());
        todo.setCompleted(todoDto.isCompleted());
-       todo.setUpdatedBy(username); // siapa yang terakhir update
+       todo.setUpdatedBy(getCurrentUsername()); // siapa yang terakhir update
 
        Todo updatedTodo = todoRepository.save(todo);
         return modelMapper.map(updatedTodo, TodoDto.class);
@@ -90,38 +120,26 @@ public class TodoServiceImpl implements TodoService {
     @Override
     public void deleteTodo(Long id) {
 
-        Todo todo = todoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Todo not found with id : " + id));
-
-        todoRepository.deleteById(id);
+        Todo todo = getTodoWithAccessCheck(id, "delete");
+        todoRepository.delete(todo);
 
     }
 
     @Override
     public TodoDto completedTodo(Long id) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        Todo todo = todoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Todo not found with id : " + id));
+        Todo todo = getTodoWithAccessCheck(id, "completed");
 
         todo.setCompleted(Boolean.TRUE);
-        todo.setUpdatedBy(username);
+        todo.setUpdatedBy(getCurrentUsername());
 
-        Todo updatedTodo = todoRepository.save(todo);
-        return modelMapper.map(updatedTodo, TodoDto.class);
+        return modelMapper.map(todoRepository.save(todo), TodoDto.class);
     }
 
     @Override
     public TodoDto inCompleteTodo(Long id) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Todo todo = todoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Todo not found with id : " + id));
-
+        Todo todo = getTodoWithAccessCheck(id, "incompleted");
         todo.setCompleted(Boolean.FALSE);
-
-        Todo updatedTodo = todoRepository.save(todo);
-        todo.setUpdatedBy(username);
-
-        return modelMapper.map(updatedTodo, TodoDto.class);
+        todo.setUpdatedBy(getCurrentUsername());
+        return modelMapper.map(todoRepository.save(todo), TodoDto.class);
     }
 }
