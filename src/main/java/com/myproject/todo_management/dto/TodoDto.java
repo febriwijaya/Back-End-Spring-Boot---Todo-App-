@@ -24,8 +24,8 @@ public class TodoDto {
 
     private boolean completed;
 
-//    private String createdBy;
-//    private String updatedBy;
+    private String createdBy;
+    private String updatedBy;
 
 //    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy:MM:dd HH:mm:ss")
 //    private LocalDateTime timeCreated;

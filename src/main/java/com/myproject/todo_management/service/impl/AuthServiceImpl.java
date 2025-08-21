@@ -283,10 +283,12 @@ public class AuthServiceImpl implements AuthService {
         user.setUpdatedBy(updateRegisterDto.getUsername());
 
 //        if(photo != null && !photo.isEmpty()) {
-            //hapus foto lama
-            deletePhoto(user.getProfilePhoto());
             //simpan foto baru
             String newPhotoPath = savePhoto(photo);
+
+            //hapus foto lama
+            deletePhoto(user.getProfilePhoto());
+
             user.setProfilePhoto(newPhotoPath);
 //        }
 

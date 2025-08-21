@@ -46,6 +46,9 @@ public class SpringSecurityConfig {
                     authorize.requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll();
                     authorize.requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll();
 
+                    // IZINKAN folder uploads (gambar dll) bisa diakses publik
+                    authorize.requestMatchers("/uploads/**").permitAll();
+
                     // Endpoint delete user hanya untuk ADMIN
                     authorize.requestMatchers(HttpMethod.DELETE, "/api/auth/delete/**").hasRole("ADMIN");
 
