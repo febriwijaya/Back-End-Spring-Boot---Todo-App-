@@ -105,13 +105,19 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public String updatePassword(UpdatePasswordDto dto) {
-        // ambil data yang sedang login
+    public String updatePassword(UpdatePasswordDto dto, String username) {
+
+        User user = userRepository.findByUsernameOrEmail(username, username)
+                .orElseThrow(() -> new TodoAPIException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // ambil username yang sedang login
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUsername = authentication.getName();
 
-        User user = userRepository.findByUsernameOrEmail(currentUsername, currentUsername)
-                .orElseThrow(() -> new TodoAPIException(HttpStatus.NOT_FOUND, "User not found"));
+        // pastikan hanya update dirinya sendiri
+        if (!currentUsername.equals(username)) {
+            throw new TodoAPIException(HttpStatus.FORBIDDEN, "You are not allowed to change other user's data");
+        }
 
         // Validasi password lama
         if (!passwordEncoder.matches(dto.getOldPassword(), user.getPassword())) {
@@ -126,7 +132,7 @@ public class AuthServiceImpl implements AuthService {
         // Update password
         user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
         user.setUpdatedAt(LocalDateTime.now());
-        user.setUpdatedBy(currentUsername);
+        user.setUpdatedBy(username);
 
         userRepository.save(user);
 

@@ -21,6 +21,6 @@ public interface AuthService {
 
     RegisterDto getUserByUsernameOrEmail(String usernameOrEmail);
 
-    String updatePassword(UpdatePasswordDto dto);
+    String updatePassword(UpdatePasswordDto dto, String username);
 
 }

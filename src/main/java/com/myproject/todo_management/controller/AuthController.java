@@ -186,7 +186,7 @@ public class AuthController {
             String response = authService.deleteRegister(id);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch(TodoAPIException apiEx) {
-            log.error("Business error while deleteing user", apiEx);
+            log.error("Business error while deleting user", apiEx);
             ErrorDetails errorDetails = new ErrorDetails(
                     LocalDateTime.now(),
                     apiEx.getMessage(),
@@ -238,11 +238,12 @@ public class AuthController {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @PutMapping("/update-password")
+    @PutMapping("/update-password/username/{username}")
     public ResponseEntity<?> updatePassword(
+            @PathVariable String username,
             @RequestBody @Valid UpdatePasswordDto passwordDto) {
         try {
-            String response = authService.updatePassword(passwordDto);
+            String response = authService.updatePassword(passwordDto, username);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (TodoAPIException apiEx) {
             log.error("There is an error", apiEx);
