@@ -5,6 +5,7 @@ import com.myproject.todo_management.entity.Role;
 import com.myproject.todo_management.entity.User;
 import com.myproject.todo_management.exception.TodoAPIException;
 import com.myproject.todo_management.respository.RoleRepository;
+import com.myproject.todo_management.respository.TodoRepository;
 import com.myproject.todo_management.respository.UserRepository;
 import com.myproject.todo_management.security.JwtTokenProvider;
 import com.myproject.todo_management.service.AuthService;
@@ -37,6 +38,7 @@ public class AuthServiceImpl implements AuthService {
 
     private ModelMapper modelMapper;
     private UserRepository userRepository;
+    private TodoRepository todoRepository;
     private RoleRepository roleRepository;
     private PasswordEncoder passwordEncoder;
     private AuthenticationManager authenticationManager;
@@ -309,9 +311,10 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new TodoAPIException(HttpStatus.NOT_FOUND, "User not found"));
 
+        todoRepository.deleteByUserId(userId);
+
         // hapus foto dari folder
         deletePhoto(user.getProfilePhoto());
-
         userRepository.delete(user);
         return "User deleted successfully";
     }
