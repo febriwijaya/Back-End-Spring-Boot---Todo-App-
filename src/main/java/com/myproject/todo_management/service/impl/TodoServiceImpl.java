@@ -1,5 +1,6 @@
 package com.myproject.todo_management.service.impl;
 
+import com.myproject.todo_management.dto.PagedResponse;
 import com.myproject.todo_management.dto.TodoDto;
 import com.myproject.todo_management.entity.Todo;
 import com.myproject.todo_management.entity.User;
@@ -10,6 +11,8 @@ import com.myproject.todo_management.respository.UserRepository;
 import com.myproject.todo_management.service.TodoService;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -91,16 +94,25 @@ public class TodoServiceImpl implements TodoService {
     }
 
     @Override
-    public List<TodoDto> getAllTodos() {
+    public PagedResponse<TodoDto> getAllTodos(Pageable pageable) {
         String currentUsername = getCurrentUsername();
 
-        List<Todo> todos = isAdmin()
-                ? todoRepository.findAll()
-                : todoRepository.findByCreatedBy(currentUsername);
+        Page<Todo> todos = isAdmin()
+                ? todoRepository.findAll(pageable)
+                : todoRepository.findByCreatedBy(currentUsername, pageable);
 
-        return todos.stream()
+        List<TodoDto> content = todos.getContent()
+                .stream()
                 .map(todo -> modelMapper.map(todo, TodoDto.class))
-                .collect(Collectors.toList());
+                .toList();
+
+        return new PagedResponse<>(
+                content,
+                todos.getNumber(),
+                todos.getSize(),
+                todos.getTotalElements(),
+                todos.getTotalPages()
+        );
     }
 
     @Override

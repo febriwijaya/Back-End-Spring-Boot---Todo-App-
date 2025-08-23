@@ -1,6 +1,7 @@
 package com.myproject.todo_management.service;
 
 import com.myproject.todo_management.dto.*;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -15,7 +16,7 @@ public interface AuthService {
 
     JwtAuthResponse login(LoginDto loginDto);
 
-    List<RegisterDto> getAllRegister();
+    PagedResponse<RegisterDto> getAllRegister(Pageable pageable);
 
     RegisterDto  getUserById(Long id);
 

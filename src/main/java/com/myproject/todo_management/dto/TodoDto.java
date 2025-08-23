@@ -1,6 +1,7 @@
 package com.myproject.todo_management.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,9 +22,7 @@ public class TodoDto {
 
     @NotBlank(message = "title cannot be empty")
     private String description;
-
     private boolean completed;
-
     private String createdBy;
     private String updatedBy;
 

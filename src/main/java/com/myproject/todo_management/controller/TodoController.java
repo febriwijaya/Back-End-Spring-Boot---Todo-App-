@@ -1,5 +1,6 @@
 package com.myproject.todo_management.controller;
 
+import com.myproject.todo_management.dto.PagedResponse;
 import com.myproject.todo_management.dto.TodoDto;
 import com.myproject.todo_management.exception.ErrorDetails;
 import com.myproject.todo_management.exception.TodoAPIException;
@@ -7,6 +8,8 @@ import com.myproject.todo_management.service.TodoService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -79,9 +82,13 @@ public class TodoController {
     // Build Get All Todos REST API
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     @GetMapping
-    public ResponseEntity<?> getAllTodos() {
+    public ResponseEntity<?> getAllTodos(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
         try {
-            List<TodoDto> todos = todoService.getAllTodos();
+            Pageable pageable = PageRequest.of(page, size);
+            PagedResponse<TodoDto> todos = todoService.getAllTodos(pageable);
 
             return ResponseEntity.ok(todos);
         }  catch (TodoAPIException apiEx) {

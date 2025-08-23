@@ -29,7 +29,6 @@ public class UpdateRegisterDto {
     private String username;
 
     @NotBlank(message = "email cannot be empty")
-    @Email(message = "invalid email format")
     private String email;
 
     @NotNull(message = "birth date cannot be null")

@@ -13,6 +13,8 @@ import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -49,13 +51,22 @@ public class AuthServiceImpl implements AuthService {
     private final String UPLOAD_DIR = "uploads/photos/";
 
     @Override
-    public List<RegisterDto> getAllRegister() {
+    public PagedResponse<RegisterDto> getAllRegister(Pageable pageable) {
 
-        List<User> users = userRepository.findAll();
-        return users.stream()
+        Page<User> users = userRepository.findAll(pageable);
+
+        List<RegisterDto> content = users.getContent()
+                .stream()
                 .map(user -> modelMapper.map(user, RegisterDto.class))
-                .collect(Collectors.toList());
+                .toList();
 
+        return new PagedResponse<>(
+                content,
+                users.getNumber(),
+                users.getSize(),
+                users.getTotalElements(),
+                users.getTotalPages()
+        );
     }
 
     @Override

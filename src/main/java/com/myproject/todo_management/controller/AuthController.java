@@ -7,6 +7,8 @@ import com.myproject.todo_management.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,10 +32,15 @@ public class AuthController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/users")
-    public ResponseEntity<?> getAllUsers() {
+    public ResponseEntity<?> getAllUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
        try {
-           List <RegisterDto> listUser = authService.getAllRegister();
-           return ResponseEntity.ok(listUser);
+           Pageable pageable = PageRequest.of(page, size);
+           PagedResponse<RegisterDto> users = authService.getAllRegister(pageable);
+
+           return ResponseEntity.ok(users);
        } catch (Exception e) {
            log.error("There is an error", e); // log error + stack trace
 
